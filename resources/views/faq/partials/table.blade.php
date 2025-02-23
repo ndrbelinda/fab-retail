@@ -1,11 +1,11 @@
-{{-- resources/views/kapasitas/partials/table.blade.php --}}
+{{-- resources/views/faq/partials/table.blade.php --}}
 <div class="overflow-x-auto">
     <table class="min-w-full bg-white rounded-lg shadow">
         <thead>
             <tr class="bg-gray-100">
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Produk</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jumlah Kapasitas</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Tarif</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Pertanyaan</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jawaban</th> <!-- Kolom Jawaban -->
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">E-Katalog</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Detail</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
@@ -13,20 +13,20 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-            @foreach($kapasitas as $item)
+            @foreach($faqs as $item)
                 <tr>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ $item->produk->nama_produk }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">{{ $item->besar_kapasitas }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">Rp{{ number_format($item->tarif_kapasitas, 0, ',', '.') }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($item->pertanyaan, 50) }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($item->jawaban, 50) }}</td> <!-- Kolom Jawaban -->
                     <td class="px-6 py-4 text-sm text-gray-900">{{ $item->tampil_ekatalog ? 'Ya' : 'Tidak' }}</td>
                     <td class="px-6 py-4 text-sm">
                         <a href="#" onclick="openModal('modal-detail-{{ $item->id }}')" class="text-blue-600 underline">Lihat Detail</a>
                     </td>
                     {{-- Status --}}
                     <td class="px-6 py-4 text-sm text-gray-900 flex space-x-2">
-                        {{-- Status: Draft --}}
+                        {{-- Ceklis 1: Draft --}}
                         <div class="relative group">
-                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->is_verified_kapasitas, ['draft', 'diajukan', 'diverifikasi']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
+                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->status, ['draft', 'diajukan', 'diverifikasi', 'ditolak']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
                                 ✓
                             </div>
                             <div class="absolute hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded mt-2">
@@ -34,9 +34,9 @@
                             </div>
                         </div>
 
-                        {{-- Status: Diajukan --}}
+                        {{-- Ceklis 2: Diajukan --}}
                         <div class="relative group">
-                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->is_verified_kapasitas, ['diajukan', 'diverifikasi']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
+                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->status, ['diajukan', 'diverifikasi']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
                                 ✓
                             </div>
                             <div class="absolute hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded mt-2">
@@ -44,9 +44,9 @@
                             </div>
                         </div>
 
-                        {{-- Status: Diverifikasi --}}
+                        {{-- Ceklis 3: Diverifikasi --}}
                         <div class="relative group">
-                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ $item->is_verified_kapasitas === 'diverifikasi' ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
+                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ $item->status === 'diverifikasi' ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
                                 ✓
                             </div>
                             <div class="absolute hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded mt-2">
@@ -58,22 +58,22 @@
                     <td class="px-6 py-4 text-sm text-gray-900">
                         @if(isset($is_verify))
                             {{-- Tombol untuk halaman verifikasi --}}
-                            <form action="{{ route('kapasitas.terima', $item->id) }}" method="POST" class="inline">
+                            <form action="{{ route('faq.terima', $item->id) }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit" class="bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600">Terima</button>
                             </form>
                             <button onclick="openModal('modal-tolak-{{ $item->id }}')" class="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 ml-2">Tolak</button>
                         @else
-                            {{-- Tombol untuk halaman daftar kapasitas --}}
-                            @if($item->is_verified_kapasitas === 'draft')
-                                <a href="{{ route('kapasitas.edit', $item->id) }}" class="bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600">Ubah</a>
+                            {{-- Tombol untuk halaman daftar FAQ --}}
+                            @if($item->status === 'draft')
+                                <a href="{{ route('faq.edit', $item->id) }}" class="bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600">Ubah</a>
                                 <button onclick="openModal('modal-hapus-{{ $item->id }}')" class="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 ml-2">Hapus Draft</button>
-                            @elseif($item->is_verified_kapasitas === 'diajukan')
+                            @elseif($item->status === 'diajukan')
                                 <button class="bg-gray-500 text-white px-2 py-1 text-xs rounded cursor-not-allowed" disabled>
                                     Menunggu Diverifikasi
                                 </button>
-                            @elseif($item->is_verified_kapasitas === 'diverifikasi')
-                                <form action="{{ route('kapasitas.kembalikan', $item->id) }}" method="POST" class="inline">
+                            @elseif($item->status === 'diverifikasi')
+                                <form action="{{ route('faq.kembalikan', $item->id) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
                                 </form>
@@ -87,17 +87,16 @@
 </div>
 
 {{-- Modal Detail --}}
-@foreach($kapasitas as $item)
+@foreach($faqs as $item)
     <div id="modal-detail-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6">
-            <h3 class="text-lg font-semibold mb-4">Detail Kapasitas</h3>
+            <h3 class="text-lg font-semibold mb-4">Detail FAQ</h3>
 
-            {{-- Informasi dari Input Form Create --}}
+            {{-- Informasi FAQ --}}
             <div class="space-y-2">
                 <p><strong>Produk:</strong> {{ $item->produk->nama_produk }}</p>
-                <p><strong>Besar Kapasitas:</strong> {{ $item->besar_kapasitas }}</p>
-                <p><strong>Tarif:</strong> Rp{{ number_format($item->tarif_kapasitas, 0, ',', '.') }}</p>
-                <p><strong>Deskripsi:</strong> {{ $item->deskripsi_kapasitas }}</p>
+                <p><strong>Pertanyaan:</strong> {{ $item->pertanyaan }}</p>
+                <p><strong>Jawaban:</strong> {{ $item->jawaban }}</p> <!-- Kolom Jawaban -->
                 <p><strong>E-Katalog:</strong> {{ $item->tampil_ekatalog ? 'Ya' : 'Tidak' }}</p>
             </div>
 

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\KapasitasController;
 use App\Http\Controllers\PerangkatController;
-// use App\Http\Controllers\FaqController;
+use App\Http\Controllers\FaqController;
 // use App\Http\Controllers\PricingController;
 
 // Beranda
@@ -82,17 +82,39 @@ Route::prefix('perangkat')->group(function () {
     Route::post('/kembalikan/{id}', [PerangkatController::class, 'kembalikan'])->name('perangkat.kembalikan');
 });
 
+// Grup Route FAQ
+Route::prefix('faq')->group(function () {
+    // Route untuk menampilkan daftar FAQ
+    Route::get('/', [FaqController::class, 'index'])->name('faq.index');
 
-// // Grup Route FAQ
-// Route::prefix('faq')->group(function () {
-//     Route::get('/', [FaqController::class, 'index'])->name('faq.index');
-//     Route::get('/tambah', [FaqController::class, 'create'])->name('faq.create');
-//     Route::post('/simpan', [FaqController::class, 'store'])->name('faq.store');
-//     Route::get('/ubah/{id}', [FaqController::class, 'edit'])->name('faq.edit');
-//     Route::put('/perbarui/{id}', [FaqController::class, 'update'])->name('faq.update');
-//     Route::get('/verifikasi/{id}', [FaqController::class, 'verify'])->name('faq.verify');
-//     Route::put('/verifikasi/{id}', [FaqController::class, 'updateVerification'])->name('faq.updateVerification');
-// });
+    // Route untuk menampilkan form tambah FAQ
+    Route::get('/tambah', [FaqController::class, 'create'])->name('faq.create');
+
+    // Route untuk menyimpan data FAQ baru
+    Route::post('/simpan', [FaqController::class, 'store'])->name('faq.store');
+
+    // Route untuk menampilkan form edit FAQ
+    Route::get('/ubah/{id}', [FaqController::class, 'edit'])->name('faq.edit');
+
+    // Route untuk memperbarui data FAQ
+    Route::put('/perbarui/{id}', [FaqController::class, 'update'])->name('faq.update');
+
+    // Route untuk menghapus data FAQ
+    Route::delete('/hapus/{id}', [FaqController::class, 'destroy'])->name('faq.destroy');
+
+    // Route untuk menampilkan halaman verifikasi FAQ
+    Route::get('/verifikasi', [FaqController::class, 'verifyIndex'])->name('faq.verify');
+
+    // Route untuk menerima FAQ (ubah status menjadi diverifikasi)
+    Route::post('/terima/{id}', [FaqController::class, 'terima'])->name('faq.terima');
+
+    // Route untuk menolak FAQ (ubah status menjadi ditolak)
+    Route::post('/tolak/{id}', [FaqController::class, 'tolak'])->name('faq.tolak');
+
+    // Route untuk mengembalikan FAQ ke status draft
+    Route::post('/kembalikan/{id}', [FaqController::class, 'kembalikan'])->name('faq.kembalikan');
+});
+
 
 // // Grup Route Pricing
 // Route::prefix('pricing')->group(function () {
