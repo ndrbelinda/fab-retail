@@ -123,6 +123,7 @@ class FaqController extends Controller
         return view('faq.verify', [
             'title' => 'Menunggu Verifikasi',
             'faqs' => $faqs,
+            'is_verify' => true,
         ]);
     }
 

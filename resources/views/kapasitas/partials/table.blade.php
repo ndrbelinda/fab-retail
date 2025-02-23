@@ -89,7 +89,7 @@
 {{-- Modal Detail --}}
 @foreach($kapasitas as $item)
     <div id="modal-detail-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6" style="max-height: 80vh; overflow-y: auto;">
             <h3 class="text-lg font-semibold mb-4">Detail Kapasitas</h3>
 
             {{-- Informasi dari Input Form Create --}}
@@ -136,6 +136,25 @@
             <div class="mt-4">
                 <button onclick="closeModal('modal-detail-{{ $item->id }}')" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Tutup</button>
             </div>
+        </div>
+    </div>
+@endforeach
+
+{{-- Modal Hapus --}}
+@foreach($kapasitas as $item)
+    <div id="modal-hapus-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6">
+            <h3 class="text-lg font-semibold mb-4">Konfirmasi Hapus</h3>
+            <p class="mb-4">Apakah Anda yakin ingin menghapus kapasitas ini?</p>
+
+            <form action="{{ route('kapasitas.destroy', $item->id) }}" method="POST">
+                @csrf
+                @method('DELETE')
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-hapus-{{ $item->id }}')" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
+                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Hapus</button>
+                </div>
+            </form>
         </div>
     </div>
 @endforeach

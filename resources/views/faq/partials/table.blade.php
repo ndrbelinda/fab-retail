@@ -5,7 +5,7 @@
             <tr class="bg-gray-100">
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Produk</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Pertanyaan</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jawaban</th> <!-- Kolom Jawaban -->
+                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jawaban</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">E-Katalog</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Detail</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
@@ -17,12 +17,12 @@
                 <tr>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ $item->produk->nama_produk }}</td>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($item->pertanyaan, 50) }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($item->jawaban, 50) }}</td> <!-- Kolom Jawaban -->
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($item->jawaban, 50) }}</td>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ $item->tampil_ekatalog ? 'Ya' : 'Tidak' }}</td>
                     <td class="px-6 py-4 text-sm">
                         <a href="#" onclick="openModal('modal-detail-{{ $item->id }}')" class="text-blue-600 underline">Lihat Detail</a>
                     </td>
-                    {{-- Status --}}
+                    {{-- Status dan Aksi --}}
                     <td class="px-6 py-4 text-sm text-gray-900 flex space-x-2">
                         {{-- Ceklis 1: Draft --}}
                         <div class="relative group">
@@ -56,23 +56,27 @@
                     </td>
                     {{-- Aksi --}}
                     <td class="px-6 py-4 text-sm text-gray-900">
-                        @if(isset($is_verify))
-                            {{-- Tombol untuk halaman verifikasi --}}
+                        @if(isset($is_verify)) {{-- Jika di halaman verifikasi --}}
+                            {{-- Tombol Terima --}}
                             <form action="{{ route('faq.terima', $item->id) }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit" class="bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600">Terima</button>
                             </form>
+                            {{-- Tombol Tolak --}}
                             <button onclick="openModal('modal-tolak-{{ $item->id }}')" class="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 ml-2">Tolak</button>
-                        @else
-                            {{-- Tombol untuk halaman daftar FAQ --}}
+                        @else {{-- Jika di halaman daftar FAQ --}}
                             @if($item->status === 'draft')
+                                {{-- Tombol Ubah --}}
                                 <a href="{{ route('faq.edit', $item->id) }}" class="bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600">Ubah</a>
+                                {{-- Tombol Hapus Draft --}}
                                 <button onclick="openModal('modal-hapus-{{ $item->id }}')" class="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 ml-2">Hapus Draft</button>
                             @elseif($item->status === 'diajukan')
+                                {{-- Tombol Menunggu Diverifikasi --}}
                                 <button class="bg-gray-500 text-white px-2 py-1 text-xs rounded cursor-not-allowed" disabled>
                                     Menunggu Diverifikasi
                                 </button>
                             @elseif($item->status === 'diverifikasi')
+                                {{-- Tombol Kembalikan --}}
                                 <form action="{{ route('faq.kembalikan', $item->id) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
@@ -89,14 +93,14 @@
 {{-- Modal Detail --}}
 @foreach($faqs as $item)
     <div id="modal-detail-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6" style="max-height: 80vh; overflow-y: auto;">
             <h3 class="text-lg font-semibold mb-4">Detail FAQ</h3>
 
             {{-- Informasi FAQ --}}
             <div class="space-y-2">
                 <p><strong>Produk:</strong> {{ $item->produk->nama_produk }}</p>
                 <p><strong>Pertanyaan:</strong> {{ $item->pertanyaan }}</p>
-                <p><strong>Jawaban:</strong> {{ $item->jawaban }}</p> <!-- Kolom Jawaban -->
+                <p><strong>Jawaban:</strong> {{ $item->jawaban }}</p>
                 <p><strong>E-Katalog:</strong> {{ $item->tampil_ekatalog ? 'Ya' : 'Tidak' }}</p>
             </div>
 
@@ -139,13 +143,34 @@
     </div>
 @endforeach
 
+{{-- Modal Hapus --}}
+@foreach($faqs as $item)
+    <div id="modal-hapus-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6">
+            <h3 class="text-lg font-semibold mb-4">Konfirmasi Hapus</h3>
+            <p class="mb-4">Apakah Anda yakin ingin menghapus FAQ ini?</p>
+
+            <form action="{{ route('faq.destroy', $item->id) }}" method="POST">
+                @csrf
+                @method('DELETE')
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-hapus-{{ $item->id }}')" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Batal</button>
+                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Hapus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+@endforeach
+
 {{-- JavaScript untuk Modal --}}
 <script>
     function openModal(modalId) {
+        console.log('Membuka modal:', modalId); // Debug
         document.getElementById(modalId).classList.remove('hidden');
     }
 
     function closeModal(modalId) {
+        console.log('Menutup modal:', modalId); // Debug
         document.getElementById(modalId).classList.add('hidden');
     }
 </script>
