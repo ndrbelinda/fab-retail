@@ -12,9 +12,11 @@ class KapasitasController extends Controller
     /**
      * Menampilkan daftar kapasitas.
      */
-    public function index()
+        public function index()
     {
-        $kapasitas = Capacity::with(['produk', 'riwayat'])->get();
+        // Ambil data kapasitas TANPA riwayat pricing
+        $kapasitas = Capacity::with('produk', 'riwayat')->get(); // Hanya load relasi produk
+
         return view('kapasitas.index', [
             'title' => 'Daftar Kapasitas',
             'kapasitas' => $kapasitas,
@@ -243,4 +245,5 @@ class KapasitasController extends Controller
 
         return redirect()->route('pricing.kapasitas')->with('success', 'Pricing berhasil diperbarui!');
     }
+    
 }

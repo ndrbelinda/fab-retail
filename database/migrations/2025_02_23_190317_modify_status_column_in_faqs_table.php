@@ -4,21 +4,20 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class ModifyStatusColumnInFaqsTable extends Migration
+class CreateRiwayatPricingKapasitasTable extends Migration
 {
     public function up()
     {
-        // Ubah tipe data kolom status menjadi enum dengan nilai yang diperbarui
-        Schema::table('faqs', function (Blueprint $table) {
-            $table->enum('status', ['draft', 'diajukan', 'diverifikasi', 'ditolak'])->default('draft')->change();
+        Schema::create('riwayat_pricing_kapasitas', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('kapasitas_id')->constrained('capacities')->onDelete('cascade');
+            $table->decimal('pricing', 10, 2); // Menyimpan nominal pricing
+            $table->timestamps(); // Kolom `created_at` akan digunakan sebagai waktu perubahan
         });
     }
 
     public function down()
     {
-        // Kembalikan ke enum sebelumnya jika rollback
-        Schema::table('faqs', function (Blueprint $table) {
-            $table->enum('status', ['draft', 'diajukan', 'diverifikasi'])->default('draft')->change();
-        });
+        Schema::dropIfExists('riwayat_pricing_kapasitas');
     }
 }

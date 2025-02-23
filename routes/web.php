@@ -5,7 +5,7 @@ use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\KapasitasController;
 use App\Http\Controllers\PerangkatController;
 use App\Http\Controllers\FaqController;
-// use App\Http\Controllers\PricingController;
+use App\Http\Controllers\PricingController;
 
 // Beranda
 Route::get('/', [BerandaController::class, 'index'])->name('beranda');
@@ -116,8 +116,14 @@ Route::prefix('faq')->group(function () {
 });
 
 
-// // Grup Route Pricing
-// Route::prefix('pricing')->group(function () {
-//     Route::get('/kapasitasinternet', [PricingController::class, 'kapasitasInternet'])->name('pricing.kapasitas');
-//     Route::get('/perangkat', [PricingController::class, 'perangkat'])->name('pricing.perangkat');
-// });
+// Grup Route Pricing
+Route::prefix('pricing')->group(function () {
+    // Halaman Pricing
+    Route::get('/', [PricingController::class, 'kapasitas'])->name('pricing.kapasitas');
+
+    Route::get('/perangkat', [PricingController::class, 'perangkat'])->name('pricing.perangkat');
+
+    // Update Pricing Kapasitas
+    Route::put('/kapasitas/{id}', [PricingController::class, 'updatePricingKapasitas'])->name('pricing.kapasitas.update');
+});
+
