@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\KapasitasController;
-// use App\Http\Controllers\PerangkatController;
+use App\Http\Controllers\PerangkatController;
 // use App\Http\Controllers\FaqController;
 // use App\Http\Controllers\PricingController;
 
@@ -46,16 +46,42 @@ Route::prefix('kapasitas')->group(function () {
     Route::post('/kembalikan/{id}', [KapasitasController::class, 'kembalikan'])->name('kapasitas.kembalikan');
 });
 
-// // Grup Route Perangkat
-// Route::prefix('perangkat')->group(function () {
-//     Route::get('/', [PerangkatController::class, 'index'])->name('perangkat.index');
-//     Route::get('/tambah', [PerangkatController::class, 'create'])->name('perangkat.create');
-//     Route::post('/simpan', [PerangkatController::class, 'store'])->name('perangkat.store');
-//     Route::get('/ubah/{id}', [PerangkatController::class, 'edit'])->name('perangkat.edit');
-//     Route::put('/perbarui/{id}', [PerangkatController::class, 'update'])->name('perangkat.update');
-//     Route::get('/verifikasi/{id}', [PerangkatController::class, 'verify'])->name('perangkat.verify');
-//     Route::put('/verifikasi/{id}', [PerangkatController::class, 'updateVerification'])->name('perangkat.updateVerification');
-// });
+// Grup Route Perangkat
+Route::prefix('perangkat')->group(function () {
+    // Route untuk menampilkan daftar kapasitas
+    Route::get('/', [PerangkatController::class, 'index'])->name('perangkat.index');
+
+    // Route untuk menampilkan form tambah kapasitas
+    Route::get('/tambah', [PerangkatController::class, 'create'])->name('perangkat.create');
+
+    // Route untuk menyimpan data kapasitas baru
+    Route::post('/simpan', [PerangkatController::class, 'store'])->name('perangkat.store');
+
+    // Route untuk menampilkan form edit kapasitas
+    Route::get('/ubah/{id}', [PerangkatController::class, 'edit'])->name('perangkat.edit');
+
+    // Route untuk memperbarui data kapasitas
+    Route::put('/perbarui/{id}', [PerangkatController::class, 'update'])->name('perangkat.update');
+
+    // Route untuk menghapus data kapasitas
+    Route::delete('/hapus/{id}', [PerangkatController::class, 'destroy'])->name('perangkat.destroy');
+
+    // Route untuk menampilkan halaman verifikasi kapasitas
+    Route::get('/verifikasi', [PerangkatController::class, 'verifyindex'])->name('perangkat.verify');
+
+    // Route untuk memperbarui status verifikasi kapasitas
+    Route::put('/verifikasi/{id}', [PerangkatController::class, 'updateVerification'])->name('perangkat.updateVerification');
+
+    // Route untuk menerima kapasitas (ubah status menjadi diverifikasi)
+    Route::post('/terima/{id}', [PerangkatController::class, 'terima'])->name('perangkat.terima');
+
+    // Route untuk menolak kapasitas (ubah status menjadi ditolak)
+    Route::post('/tolak/{id}', [PerangkatController::class, 'tolak'])->name('perangkat.tolak');
+
+    // Route untuk mengembalikan kapasitas ke status draft
+    Route::post('/kembalikan/{id}', [PerangkatController::class, 'kembalikan'])->name('perangkat.kembalikan');
+});
+
 
 // // Grup Route FAQ
 // Route::prefix('faq')->group(function () {

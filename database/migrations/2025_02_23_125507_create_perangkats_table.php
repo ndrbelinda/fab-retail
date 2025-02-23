@@ -1,21 +1,21 @@
 <?php
 
-// database/migrations/2025_02_21_145612_create_capacities_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateCapacitiesTable extends Migration
+class CreatePerangkatsTable extends Migration
 {
     public function up()
     {
-        Schema::create('capacities', function (Blueprint $table) {
+        Schema::create('perangkats', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_produk');
-            $table->string('besar_kapasitas');
-            $table->decimal('tarif_kapasitas', 10);
-            $table->text('deskripsi_kapasitas')->nullable();
-            $table->enum('is_verified_kapasitas', ['draft', 'diajukan', 'diverifikasi'])->default('draft');
+            $table->string('jenis_perangkat');
+            $table->string('gambar_perangkat');
+            $table->decimal('tarif_perangkat', 10);
+            $table->text('deskripsi_perangkat')->nullable();
+            $table->enum('is_verified_perangkat', ['draft', 'diajukan', 'diverifikasi'])->default('draft');
             $table->boolean('tampil_ekatalog')->default(false);
             $table->timestamps();
 
@@ -26,6 +26,6 @@ class CreateCapacitiesTable extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('capacities');
+        Schema::dropIfExists('perangkats');
     }
 }
