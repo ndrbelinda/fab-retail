@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('riwayat_pricing_kapasitas', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('kapasitas_id');
+            $table->decimal('pricing', 15, 2);
             $table->timestamps();
+
+            // foreign key ke perangkat
+            $table->foreign('kapasitas_id')->references('id')->on('capacities')->onDelete('cascade');
         });
     }
 

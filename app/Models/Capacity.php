@@ -31,7 +31,7 @@ class Capacity extends Model
     }
 
     // Relasi ke tabel riwayat_pricing_kapasitas
-    public function riwayatPricing()
+    public function RiwayatPricingKapasitas()
     {
         return $this->hasMany(RiwayatPricingKapasitas::class, 'kapasitas_id');
     }

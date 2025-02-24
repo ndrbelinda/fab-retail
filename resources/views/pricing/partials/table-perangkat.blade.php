@@ -1,9 +1,10 @@
+{{-- resources/views/pricing/perangkat/table.blade.php --}}
 <div class="overflow-x-auto">
     <table class="min-w-full bg-white rounded-lg shadow">
         <thead>
             <tr class="bg-gray-100">
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Produk</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jumlah Kapasitas</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jenis Perangkat</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Tarif</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Pricing</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Riwayat Pricing</th>
@@ -11,13 +12,13 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-            @foreach($kapasitas as $item)
+            @foreach($perangkat as $item)
                 <tr>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ $item->produk->nama_produk }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">{{ $item->besar_kapasitas }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">Rp{{ number_format($item->tarif_kapasitas, 0, ',', '.') }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ $item->jenis_perangkat }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">Rp{{ number_format($item->tarif_perangkat, 0, ',', '.') }}</td>
                     <td class="px-6 py-4 text-sm text-gray-900">
-                        Rp{{ number_format($item->riwayatPricingKapasitas->first()->pricing ?? $item->tarif_kapasitas, 0, ',', '.') }}
+                        Rp{{ number_format($item->riwayatPricingPerangkat->first()->pricing ?? $item->tarif_perangkat, 0, ',', '.') }}
                     </td>
                     <td class="px-6 py-4 text-sm">
                         <a href="#" onclick="openModal('modal-riwayat-{{ $item->id }}')" class="text-blue-600 underline">Lihat Riwayat</a>
@@ -31,17 +32,17 @@
     </table>
 </div>
 
-{{-- Modal Riwayat Pricing --}}
-@foreach($kapasitas as $item)
+{{-- Modal Riwayat Pricing Perangkat --}}
+@foreach($perangkat as $item)
     <div id="modal-riwayat-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6" style="max-height: 80vh; overflow-y: auto;">
-            <h3 class="text-lg font-semibold mb-4">Riwayat Pricing</h3>
+            <h3 class="text-lg font-semibold mb-4">Riwayat Pricing Perangkat</h3>
 
-            {{-- Informasi Kapasitas --}}
+            {{-- Informasi Perangkat --}}
             <div class="space-y-2">
                 <p><strong>Produk:</strong> {{ $item->produk->nama_produk }}</p>
-                <p><strong>Besar Kapasitas:</strong> {{ $item->besar_kapasitas }}</p>
-                <p><strong>Tarif:</strong> Rp{{ number_format($item->tarif_kapasitas, 0, ',', '.') }}</p>
+                <p><strong>Jenis Perangkat:</strong> {{ $item->jenis_perangkat }}</p>
+                <p><strong>Tarif:</strong> Rp{{ number_format($item->tarif_perangkat, 0, ',', '.') }}</p>
             </div>
 
             {{-- Tabel Riwayat Pricing --}}
@@ -54,7 +55,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($item->riwayatPricingKapasitas as $riwayat)
+                    @foreach($item->riwayatPricingPerangkat as $riwayat)
                         <tr>
                             <td class="px-4 py-2 text-sm text-gray-900">{{ $riwayat->created_at->format('d/m/Y H:i') }}</td>
                             <td class="px-4 py-2 text-sm text-gray-900">Rp{{ number_format($riwayat->pricing, 0, ',', '.') }}</td>
@@ -71,12 +72,12 @@
     </div>
 @endforeach
 
-{{-- Modal Ubah Pricing kapasitas --}}
-@foreach($kapasitas as $item)
+{{-- Modal Ubah Pricing Perangkat --}}
+@foreach($perangkat as $item)
     <div id="modal-ubah-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6">
-            <h3 class="text-lg font-semibold mb-4">Ubah Pricing Kapasitas</h3>
-            <form action="{{ route('pricing.kapasitas.update', $item->id) }}" method="POST">
+            <h3 class="text-lg font-semibold mb-4">Ubah Pricing Perangkat</h3>
+            <form action="{{ route('pricing.perangkat.update', $item->id) }}" method="POST">
                 @csrf
                 @method('PUT')
                 <div class="space-y-4">
@@ -87,8 +88,8 @@
                         id="pricing-{{ $item->id }}" 
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500 @error('pricing') border-red-500 @enderror" 
                         required
-                        min="{{ $item->tarif_kapasitas }}" 
-                        value="{{ $item->riwayatPricingKapasitas->first()->pricing ?? $item->tarif_kapasitas }}"
+                        min="{{ $item->tarif_perangkat }}" 
+                        value="{{ $item->riwayatPricingPerangkat->first()->pricing ?? $item->tarif_perangkat }}"
                         oninput="limitInputLength(this, 9)" 
                     >
                     {{-- Pesan error --}}

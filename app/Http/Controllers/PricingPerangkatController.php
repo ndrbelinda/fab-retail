@@ -3,49 +3,49 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Capacity;
-use App\Models\RiwayatPricingKapasitas;
+use App\Models\Perangkat;
+use App\Models\RiwayatPricingPerangkat;
 
-class PricingController extends Controller
+class PricingPerangkatController extends Controller
 {
     /**
      * Menampilkan halaman pricing.
      */
-        public function kapasitas()
+        public function perangkat()
     {
-        // Ambil data kapasitas beserta semua riwayat pricing
-        $kapasitas = Capacity::with('riwayatPricingKapasitas') // Ambil semua riwayat pricing
-            ->where('is_verified_kapasitas', 'diverifikasi')
+        // Ambil data perangakt beserta semua riwayat pricing
+        $perangkat = Perangkat::with('riwayatPricingPerangkat') // Ambil semua riwayat pricing
+            ->where('is_verified_perangkat', 'diverifikasi')
             ->get();
 
-        return view('pricing.kapasitas', [
+        return view('pricing.perangkat', [
             'title' => 'Pricing',
-            'kapasitas' => $kapasitas,
+            'perangkat' => $perangkat,
         ]);
     }
 
     /**
      * Memperbarui pricing kapasitas.
      */
-    public function updatePricingKapasitas(Request $request, $id)
+    public function updatePricingPerangkat(Request $request, $id)
     {
         // Ambil data kapasitas
-        $kapasitas = Capacity::findOrFail($id);
+        $perangkat = Perangkat::findOrFail($id);
 
         // Validasi input
         $request->validate([
             'pricing' => [
                 'required',
                 'numeric',
-                'min:' . $kapasitas->tarif_kapasitas, // Pricing tidak boleh kurang dari tarif
+                'min:' . $perangkat->tarif_perangkat, // Pricing tidak boleh kurang dari tarif
             ],
         ], [
             'pricing.min' => 'Pricing tidak boleh kurang dari tarif.', // Pesan error khusus
         ]);
 
         // Simpan riwayat pricing
-        RiwayatPricingKapasitas::create([
-            'kapasitas_id' => $kapasitas->id,
+        RiwayatPricingPerangkat::create([
+            'perangkat_id' => $perangkat->id,
             'pricing' => $request->pricing, // Ubah dari nominal ke pricing
         ]);
 

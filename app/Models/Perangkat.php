@@ -48,4 +48,11 @@ class Perangkat extends Model
     {
         return $this->hasMany(RiwayatPerangkat::class, 'perangkat_id');
     }
+
+    // Relasi ke tabel riwayat_pricing_perangkat
+    public function riwayatPricingPerangkat()
+    {
+        return $this->hasMany(RiwayatPricingPerangkat::class, 'perangkat_id');
+    }
+
 }
