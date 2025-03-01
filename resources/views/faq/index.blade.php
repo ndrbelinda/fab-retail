@@ -13,11 +13,15 @@
            class="{{ request()->routeIs('faq.index') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
             Daftar
         </a>
+
+        @if(auth()->check() && auth()->user()->role === 'avp')
         <span>|</span>
         <a href="{{ route('faq.verify') }}" 
            class="{{ request()->routeIs('faq.verify') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
             Menunggu Verifikasi
         </a>
+        @endif
+        
     </div>
 
     {{-- Panggil Partial View Tabel --}}

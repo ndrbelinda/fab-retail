@@ -1,15 +1,20 @@
-<!-- header.html -->
 <div class="flex justify-end mb-8">
-    <div class="relative group">
-        <button class="flex items-center text-gray-700 hover:text-gray-900">
-            <span class="mr-2">Nama Pengguna</span>
-            <svg class="w-4 h-4 transform group-hover:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <div x-data="{ open: false }" class="relative">
+        <button @click="open = !open" class="flex items-center text-gray-700 hover:text-gray-900">
+            @auth
+                <span class="mr-2">{{ auth()->user()->username }}</span>
+            @endauth
+            
+            <svg class="w-4 h-4 transform transition-transform" :class="{ 'rotate-180': open }">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </button>
-        <!-- Dropdown Logout -->
-        <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:block">
-            <button class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</button>
+
+        <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</button>
+            </form>
         </div>
     </div>
 </div>

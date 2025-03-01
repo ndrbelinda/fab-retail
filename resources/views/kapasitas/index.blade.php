@@ -12,11 +12,13 @@
            class="{{ request()->routeIs('kapasitas.index') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
             Daftar
         </a>
-        <span>|</span>
-        <a href="{{ route('kapasitas.verify') }}" 
-           class="{{ request()->routeIs('kapasitas.verify') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
-            Menunggu Verifikasi
-        </a>
+        @if(auth()->check() && auth()->user()->role === 'avp')
+            <span>|</span>
+            <a href="{{ route('kapasitas.verify') }}" 
+            class="{{ request()->routeIs('kapasitas.verify') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
+                Menunggu Verifikasi
+            </a>
+        @endif
     </div>
 
     {{-- Panggil Partial View Tabel --}}
