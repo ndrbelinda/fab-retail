@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', 'smtp'),
 
     /*
     |--------------------------------------------------------------------------
@@ -37,16 +37,37 @@ return [
 
     'mailers' => [
 
-        'smtp' => [
+         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
-            'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', '127.0.0.1'),
-            'port' => env('MAIL_PORT', 2525),
+            'host' => env('MAIL_HOST', 'smtp.gmail.com'),
+            'port' => env('MAIL_PORT', 587),
+            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+            'auth_mode' => null,
+        ],
+
+        'smtp_avp' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_HOST_AVP', 'smtp.gmail.com'),
+            'port' => env('MAIL_PORT_AVP', 587),
+            'encryption' => env('MAIL_ENCRYPTION_AVP', 'tls'),
+            'username' => env('MAIL_USERNAME_AVP'),
+            'password' => env('MAIL_PASSWORD_AVP'),
+            'timeout' => null,
+            'auth_mode' => null,
+        ],
+
+        'smtp_staff' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_HOST_STAFF', 'smtp.gmail.com'),
+            'port' => env('MAIL_PORT_STAFF', 587),
+            'encryption' => env('MAIL_ENCRYPTION_STAFF', 'tls'),
+            'username' => env('MAIL_USERNAME_STAFF'),
+            'password' => env('MAIL_PASSWORD_STAFF'),
+            'timeout' => null,
+            'auth_mode' => null,
         ],
 
         'ses' => [

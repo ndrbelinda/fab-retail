@@ -4,7 +4,7 @@
         <thead>
             <tr class="bg-gray-100">
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Produk</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Jumlah Kapasitas</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Besar Kapasitas (GB)</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Tarif</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">E-Katalog</th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Detail</th>
@@ -73,10 +73,12 @@
                                     Menunggu Diverifikasi
                                 </button>
                             @elseif($item->is_verified_kapasitas === 'diverifikasi')
-                                <form action="{{ route('kapasitas.kembalikan', $item->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
-                                </form>
+                                @if(auth()->check() && auth()->user()->role === 'avp')
+                                    <form action="{{ route('kapasitas.kembalikan', $item->id) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
+                                    </form>
+                                @endif
                             @endif
                         @endif
                     </td>
@@ -84,6 +86,16 @@
             @endforeach
         </tbody>
     </table>
+</div>
+
+<!-- Pagination -->
+{{-- <div class="mt-4 flex justify-center">
+    {{ $kapasitas->links('vendor.pagination.tailwind') }}
+</div> --}}
+
+<!-- Pagination -->
+<div class="mt-4">
+    {{ $kapasitas->links() }}
 </div>
 
 {{-- Modal Detail --}}
@@ -112,7 +124,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($item->riwayat as $riwayat)
+                    @foreach($item->riwayat->sortByDesc('created_at') as $riwayat)
                         <tr>
                             <td class="px-4 py-2 text-sm text-gray-900">
                                 @if($riwayat->status === 'draft')

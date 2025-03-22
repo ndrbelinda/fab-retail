@@ -14,7 +14,11 @@ class Faq extends Model
         'pertanyaan',
         'jawaban',
         'tampil_ekatalog',
-        'status',
+        'is_verified_faq',
+    ];
+
+    protected $casts = [
+        'tampil_ekatalog' => 'boolean',
     ];
 
     // Relasi ke tabel produk

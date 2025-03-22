@@ -10,15 +10,18 @@
     {{-- Tombol Navigasi --}}
     <div class="mb-6 flex items-center space-x-2 text-gray-700 text-sm">
         <a href="{{ route('perangkat.index') }}" 
-           class="{{ request()->routeIs('kapasitas.index') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
+           class="{{ request()->routeIs('perangkat.index') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
             Daftar
         </a>
         <span>|</span>
-        <a href="{{ route('kapasitas.verify') }}" 
+        <a href="{{ route('perangkat.verify') }}" 
            class="{{ request()->routeIs('perangkat.verify') ? 'text-blue-500 font-semibold underline' : 'font-semibold' }}">
             Menunggu Verifikasi
         </a>
     </div>
+
+    {{-- Panggil Partial View Filter --}}
+    @include('perangkat.partials.filter', ['produk' => $produk])
 
     <!-- Tabel Kapasitas Menunggu Verifikasi -->
     @include('perangkat.partials.table', ['perangkat' => $perangkat, 'is_verify' => true])
@@ -32,7 +35,15 @@
                     @csrf
                     <div class="space-y-4">
                         <label for="alasan_penolakan" class="block text-sm font-medium text-gray-700">Alasan Penolakan</label>
-                        <textarea name="alasan_penolakan" id="alasan_penolakan" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 focus:border-blue-500 focus:ring-blue-500"></textarea>
+                        <textarea 
+                            name="alasan_penolakan" 
+                            id="alasan_penolakan_{{ $item->id }}" 
+                            rows="3" 
+                            maxlength="150" 
+                            oninput="updateCharCount({{ $item->id }})" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Masukkan alasan penolakan (maksimal 150 karakter)"></textarea>
+                        <p id="charCount_{{ $item->id }}" class="text-sm text-gray-500">150/150 karakter tersisa</p>
                     </div>
 
                     {{-- Tombol Aksi --}}
@@ -53,6 +64,16 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function updateCharCount(itemId) {
+            const textarea = document.getElementById(`alasan_penolakan_${itemId}`);
+            const maxLength = 150;
+            const currentLength = textarea.value.length;
+            const remaining = maxLength - currentLength;
+
+            const countElement = document.getElementById(`charCount_${itemId}`);
+            countElement.textContent = `${remaining}/250 karakter tersisa`;
         }
     </script>
 </x-layout>

@@ -31,7 +31,7 @@ class Perangkat extends Model
      * @var array
      */
     protected $casts = [
-        'tarif_perangkat' => 'decimal:2', // Cast tarif_kapasitas ke tipe decimal
+        'tarif_perangkat' => 'integer', // Cast tarif_kapasitas ke tipe decimal
         'tampil_ekatalog' => 'boolean',   // Cast tampil_ekatalog ke tipe boolean
     ];
 

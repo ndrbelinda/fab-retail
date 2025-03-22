@@ -24,7 +24,10 @@
         
     </div>
 
+     {{-- Panggil Partial View Filter --}}
+    @include('faq.partials.filter', ['produk' => $produk])
+
     {{-- Panggil Partial View Tabel --}}
-    @include('faq.partials.table', ['faqs' => $faqs])
+    @include('faq.partials.table', ['faq' => $faq])
 
 </x-layout>

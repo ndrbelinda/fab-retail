@@ -6,16 +6,56 @@ use Illuminate\Http\Request;
 use App\Models\Faq;
 use App\Models\Produk;
 use App\Models\RiwayatFaq;
+use App\Mail\FaqStatusEmail;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FaqController extends Controller
 {
     // Menampilkan daftar FAQ
-    public function index()
+    public function index(Request $request)
     {
-        $faqs = Faq::with(['produk', 'riwayat'])->get();
+        //Menampilkan daftar Faq
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'asc');
+        $produkFilter = $request->query('produk', []);
+        $waktuFilter = $request->query('waktu');
+
+        //Query Dasar
+        $faq = Faq::with('produk', 'riwayat');
+        
+        // Filter berdasarkan produk
+        if (!empty($produkFilter)) {
+            $faq->whereHas('produk', function ($query) use ($produkFilter) {
+                $query->whereIn('nama_produk', $produkFilter);
+            });
+        }
+
+        // Filter berdasarkan waktu pembuatan
+        if ($waktuFilter === 'terlama') {
+            $faq->orderBy('created_at', 'asc');
+        } elseif ($waktuFilter === 'terbaru') {
+            $faq->orderBy('created_at', 'desc');
+        }
+
+        // Default sorting jika tidak ada filter
+        if (empty($produkFilter) && empty($waktuFilter)) {
+            $faq->orderBy('created_at', 'desc');
+        }
+
+        // Ambil data
+        $faq = $faq->paginate(10);
+
+        // Ambil data produk untuk filter
+        $produk = Produk::all();
+        
         return view('faq.index', [
             'title' => 'Daftar FAQ',
-            'faqs' => $faqs,
+            'faq' => $faq,
+            'produk' => $produk,
         ]);
     }
 
@@ -30,7 +70,7 @@ class FaqController extends Controller
     }
 
     // Menyimpan data FAQ baru
-        public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
             'id_produk' => 'required|exists:produk,id',
@@ -42,30 +82,64 @@ class FaqController extends Controller
         // Tentukan status berdasarkan action
         $status = $request->action === 'ajukan' ? 'diajukan' : 'draft';
 
-        // Simpan FAQ baru
-        $faq = Faq::create([
-            'id_produk' => $request->id_produk,
-            'pertanyaan' => $request->pertanyaan,
-            'jawaban' => $request->jawaban,
-            'tampil_ekatalog' => $request->tampil_ekatalog,
-            'status' => $status, // Set status berdasarkan action
-        ]);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Simpan riwayat status
-        RiwayatFaq::create([
-            'faq_id' => $faq->id,
-            'status' => $status,
-            'waktu' => now(),
-        ]);
+        try {
+            // Simpan FAQ baru
+            $faq = Faq::create([
+                'id_produk' => $request->id_produk,
+                'pertanyaan' => $request->pertanyaan,
+                'jawaban' => $request->jawaban,
+                'tampil_ekatalog' => $request->tampil_ekatalog,
+                'is_verified_faq' => $status, // Pastikan ini sesuai dengan kolom di database
+            ]);
 
-        return redirect()->route('faq.index')->with('success', 'FAQ berhasil ditambahkan!');
+            // Simpan riwayat status
+            RiwayatFaq::create([
+                'faq_id' => $faq->id,
+                'status' => $status,
+                'waktu' => now(),
+            ]);
+
+            // Kirim email hanya jika status "diajukan"
+            if ($status === 'diajukan') {
+                // Ambil email dari user yang sedang login
+                $user = Auth::user();
+                $fromEmail = $user->email;
+
+                // Atur mailer berdasarkan email pengguna
+                $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+                // Kirim email dengan mailer yang dipilih
+                Mail::mailer($mailer)->to('avpprodukxyz@gmail.com')
+                    ->send(new FaqStatusEmail($faq, $status));
+            }
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('faq.index')->with('success', 'Faq berhasil ditambahkan!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error (opsional)
+            Log::error('Gagal menyimpan faq: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal menyimpan faq. Silakan coba lagi.');
+        }
     }
 
     // Menampilkan form edit FAQ
     public function edit($id)
     {
+        // Ambil data Faq yang akan diedit
         $faq = Faq::findOrFail($id);
+
+        // Ambil semuda data produk
         $produk = Produk::all();
+
         return view('faq.edit', [
             'title' => 'Ubah FAQ',
             'faq' => $faq,
@@ -86,26 +160,56 @@ class FaqController extends Controller
         // Tentukan status berdasarkan action
         $status = $request->action === 'ajukan' ? 'diajukan' : 'draft';
 
-        // Ambil data FAQ yang akan diperbarui
-        $faq = Faq::findOrFail($id);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Perbarui data FAQ
-        $faq->update([
-            'id_produk' => $request->id_produk,
-            'pertanyaan' => $request->pertanyaan,
-            'jawaban' => $request->jawaban,
-            'tampil_ekatalog' => $request->tampil_ekatalog,
-            'status' => $status, // Set status berdasarkan action
-        ]);
+        try {
+            // Ambil data faq yang akan diperbarui
+            $faq = Faq::findOrFail($id);
 
-        // Simpan riwayat status baru
-        RiwayatFaq::create([
-            'faq_id' => $faq->id,
-            'status' => $status,
-            'waktu' => now(),
-        ]);
+            // Simpan FAQ baru
+            $faq->update([
+                'id_produk' => $request->id_produk,
+                'pertanyaan' => $request->pertanyaan,
+                'jawaban' => $request->jawaban,
+                'tampil_ekatalog' => $request->tampil_ekatalog,
+                'is_verified_faq' => $status,
+            ]);
 
-        return redirect()->route('faq.index')->with('success', 'FAQ berhasil diperbarui!');
+            // Simpan riwayat status
+            RiwayatFaq::create([
+                'faq_id' => $faq->id,
+                'status' => $status,
+                'waktu' => now(),
+            ]);
+
+            // Kirim email hanya jika status "diajukan"
+            if ($status === 'diajukan') {
+                // Ambil email dari user yang sedang login
+                $user = Auth::user();
+                $fromEmail = $user->email;
+
+                // Atur mailer berdasarkan email pengguna
+                $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+                // Kirim email dengan mailer yang dipilih
+                Mail::mailer($mailer)->to('avpprodukxyz@gmail.com')
+                    ->send(new FaqStatusEmail($faq, $status));
+            }
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('faq.index')->with('success', 'Faq berhasil ditambahkan!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error (opsional)
+            Log::error('Gagal menyimpan faq: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal menyimpan faq. Silakan coba lagi.');
+        }
     }
 
     // Menghapus data FAQ
@@ -117,70 +221,183 @@ class FaqController extends Controller
     }
 
     // Menampilkan halaman verifikasi FAQ
-    public function verifyIndex()
+    public function verifyIndex(Request $request)
     {
-        $faqs = Faq::where('status', 'diajukan')->get();
+        //Menampilkan daftar faq
+        $produkFilter = $request->query('produk', []);
+        $waktuFilter = $request->query('waktu');
+
+        // Query dasar untuk faq yang statusnya 'diajukan'
+        $faq = Faq::with(['produk', 'riwayat'])
+            ->where('is_verified_faq', 'diajukan');
+        
+        // Filter berdasarkan produk
+        if (!empty($produkFilter)) {
+            $faq->whereHas('produk', function ($query) use ($produkFilter) {
+                $query->whereIn('nama_produk', $produkFilter);
+            });
+        }
+
+        // Filter berdasarkan waktu pembuatan
+        if ($waktuFilter === 'terlama') {
+            $faq->orderBy('created_at', 'asc');
+        } elseif ($waktuFilter === 'terbaru') {
+            $faq->orderBy('created_at', 'desc');
+        }
+
+        // Ambil data
+        $faq = $faq->paginate(10);
+
+        // Ambil data produk untuk filter
+        $produk = Produk::all();
+        
         return view('faq.verify', [
-            'title' => 'Menunggu Verifikasi',
-            'faqs' => $faqs,
-            'is_verify' => true,
+            'title' => 'Daftar FAQ',
+            'faq' => $faq,
+            'produk' => $produk,
         ]);
     }
 
     // Menerima FAQ (ubah status menjadi diverifikasi)
     public function terima($id)
     {
-        $faq = Faq::findOrFail($id);
-        $faq->update(['status' => 'diverifikasi']);
+       // Mulai transaksi database
+        DB::beginTransaction();
 
-        RiwayatFaq::create([
-            'faq_id' => $faq->id,
-            'status' => 'diverifikasi',
-            'waktu' => now(),
-        ]);
+        try {
+            // Ambil data faq yang akan diperbarui
+            $faq = Faq::findOrFail($id);
 
-        return redirect()->route('faq.verify')->with('success', 'FAQ berhasil diverifikasi!');
+            // Simpan FAQ baru
+            $faq->update([
+                'is_verified_faq' => 'diverifikasi',
+            ]);
+
+            // Simpan riwayat status
+            RiwayatFaq::create([
+                'faq_id' => $faq->id,
+                'status' => 'diverifikasi',
+                'waktu' => now(),
+            ]);
+
+            // Kirim email notifikasi
+            $user = Auth::user();
+            $fromEmail = $user->email;
+            $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+            Mail::mailer($mailer)->to('staffprodukxyz@gmail.com')
+                ->send(new FaqStatusEmail($faq, 'diverifikasi'));
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('faq.verify')->with('success', 'Faq berhasil diverifikasi!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error (opsional)
+            Log::error('Gagal menyimpan faq: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal menyimpan faq. Silakan coba lagi.');
+        }
     }
 
     // Menolak FAQ (ubah status menjadi ditolak)
     public function tolak(Request $request, $id)
     {
-        $request->validate([
-            'alasan_penolakan' => 'required|string',
-        ]);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Ambil data FAQ yang akan ditolak
-        $faq = Faq::findOrFail($id);
+        try {
+            // Validasi input alasan penolakan
+            $request->validate([
+                'alasan_penolakan' => 'required|string',
+            ]);
 
-        // Ubah status menjadi draft
-        $faq->update([
-            'status' => 'draft', // Kembalikan status ke draft
-        ]);
+            // Ambil data faq yang akan ditolak
+            $faq = Faq::findOrFail($id);
 
-        // Simpan riwayat status ditolak
-        RiwayatFaq::create([
-            'faq_id' => $faq->id,
-            'status' => 'ditolak', // Status riwayat tetap 'ditolak'
-            'waktu' => now(),
-            'keterangan' => $request->alasan_penolakan,
-        ]);
+            // Ubah status menjadi draft
+            $faq->update([
+                'is_verified_faq' => 'draft',
+            ]);
 
-        return redirect()->route('faq.verify')->with('success', 'FAQ berhasil ditolak dan dikembalikan ke draft!');
+            // Simpan riwayat status ditolak
+            RiwayatFaq::create([
+                'faq_id' => $faq->id,
+                'status' => 'ditolak',
+                'waktu' => now(),
+                'keterangan' => $request->alasan_penolakan,
+            ]);
+
+            // Kirim email notifikasi
+            $user = Auth::user();
+            $fromEmail = $user->email;
+            $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+            Mail::mailer($mailer)->to('staffprodukxyz@gmail.com')
+                ->send(new FaqStatusEmail($faq, 'ditolak', $request->alasan_penolakan));
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('faq.verify')->with('success', 'Faq berhasil ditolak!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error
+            Log::error('Gagal mengirim email: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal mengirim email. Data tidak disimpan.');
+        }
     }
 
     // Mengembalikan FAQ ke status draft
     public function kembalikan($id)
     {
-        $faq = Faq::findOrFail($id);
-        $faq->update(['status' => 'draft']);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        RiwayatFaq::create([
-            'faq_id' => $faq->id,
-            'status' => 'draft',
-            'waktu' => now(),
-            'keterangan' => 'Dikembalikan dari diverifikasi',
-        ]);
+        try {
+            // Ambil data faq yang akan dikembalikan
+            $faq = Faq::findOrFail($id);
 
-        return redirect()->route('faq.index')->with('success', 'FAQ berhasil dikembalikan ke draft!');
+            // Ubah status menjadi draft
+            $faq->update([
+                'is_verified_faq' => 'draft',
+            ]);
+
+            // Simpan riwayat status draft dengan keterangan
+            $keterangan = 'Dikembalikan dari diverifikasi';
+            RiwayatFaq::create([
+                'faq_id' => $faq->id,
+                'status' => 'draft',
+                'waktu' => now(),
+                'keterangan' => $keterangan,
+            ]);
+
+            // Kirim email notifikasi
+            $user = Auth::user();
+            $fromEmail = $user->email;
+            $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+            Mail::mailer($mailer)->to('staffprodukxyz@gmail.com')
+                ->send(new FaqStatusEmail($faq, 'dikembalikan', $keterangan));
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('faq.index')->with('success', 'Faq berhasil dikembalikan ke draft!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error
+            Log::error('Gagal mengirim email: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal mengirim email. Data tidak disimpan.');
+        }
     }
 }

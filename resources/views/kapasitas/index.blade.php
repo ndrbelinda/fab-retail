@@ -21,6 +21,9 @@
         @endif
     </div>
 
+    {{-- Panggil Partial View Filter --}}
+    @include('kapasitas.partials.filter', ['produk' => $produk])
+
     {{-- Panggil Partial View Tabel --}}
     @include('kapasitas.partials.table', ['kapasitas' => $kapasitas])
 

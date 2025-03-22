@@ -23,6 +23,9 @@
         
     </div>
 
+    {{-- Panggil Partial View Filter --}}
+    @include('perangkat.partials.filter', ['produk' => $produk])
+
     {{-- Panggil Partial View Tabel --}}
     @include('perangkat.partials.table', ['perangkat' => $perangkat])
 

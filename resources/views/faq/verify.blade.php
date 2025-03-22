@@ -20,11 +20,14 @@
         </a>
     </div>
 
+    {{-- Panggil Partial View Filter --}}
+    @include('faq.partials.filter', ['produk' => $produk])
+
     <!-- Tabel FAQ Menunggu Verifikasi -->
-    @include('faq.partials.table', ['faqs' => $faqs, 'is_verify' => true])
+    @include('faq.partials.table', ['faq' => $faq, 'is_verify' => true])
 
     <!-- Modal Tolak -->
-    @foreach($faqs as $item)
+    @foreach($faq as $item)
         <div id="modal-tolak-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div class="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6">
                 <h3 class="text-lg font-semibold mb-4">Konfirmasi Penolakan</h3>
@@ -32,7 +35,15 @@
                     @csrf
                     <div class="space-y-4">
                         <label for="alasan_penolakan" class="block text-sm font-medium text-gray-700">Alasan Penolakan</label>
-                        <textarea name="alasan_penolakan" id="alasan_penolakan" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 focus:border-blue-500 focus:ring-blue-500"></textarea>
+                        <textarea 
+                            name="alasan_penolakan" 
+                            id="alasan_penolakan_{{ $item->id }}" 
+                            rows="3" 
+                            maxlength="150" 
+                            oninput="updateCharCount({{ $item->id }})" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Masukkan alasan penolakan (maksimal 150 karakter)"></textarea>
+                        <p id="charCount_{{ $item->id }}" class="text-sm text-gray-500">150/150 karakter tersisa</p>
                     </div>
 
                     {{-- Tombol Aksi --}}
@@ -53,6 +64,16 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function updateCharCount(itemId) {
+            const textarea = document.getElementById(`alasan_penolakan_${itemId}`);
+            const maxLength = 150;
+            const currentLength = textarea.value.length;
+            const remaining = maxLength - currentLength;
+
+            const countElement = document.getElementById(`charCount_${itemId}`);
+            countElement.textContent = `${remaining}/250 karakter tersisa`;
         }
     </script>
 </x-layout>

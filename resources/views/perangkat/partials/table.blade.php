@@ -81,10 +81,12 @@
                                     Menunggu Diverifikasi
                                 </button>
                             @elseif($item->is_verified_perangkat === 'diverifikasi')
-                                <form action="{{ route('perangkat.kembalikan', $item->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
-                                </form>
+                                @if(auth()->check() && auth()->user()->role === 'avp')
+                                    <form action="{{ route('perangkat.kembalikan', $item->id) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
+                                    </form>
+                                @endif
                             @endif
                         @endif
                     </td>
@@ -92,6 +94,11 @@
             @endforeach
         </tbody>
     </table>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4">
+    {{ $perangkat->links() }}
 </div>
 
 {{-- Modal Detail --}}
@@ -126,7 +133,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($item->riwayat as $riwayat)
+                    @foreach($item->riwayat->sortByDesc('created_at') as $riwayat)
                         <tr>
                             <td class="px-4 py-2 text-sm text-gray-900">
                                 @if($riwayat->status === 'draft')

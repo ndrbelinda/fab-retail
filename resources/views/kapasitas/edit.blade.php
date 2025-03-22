@@ -37,18 +37,23 @@
         <!-- Input: Besar Kapasitas -->
         <div>
             <label for="besar_kapasitas" class="block text-sm font-medium text-gray-700">
-                Besar Kapasitas <span class="text-red-500">*</span>
+                Besar Kapasitas (GB) <span class="text-red-500">*</span>
             </label>
-            <input type="text" name="besar_kapasitas" id="besar_kapasitas" value="{{ old('besar_kapasitas', $kapasitas->besar_kapasitas) }}" class="mt-1 block w-64 rounded-md border-gray-300 shadow-sm h-10 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 @error('besar_kapasitas') border-red-500 @enderror" required>
+            <input type="text" name="besar_kapasitas" id="besar_kapasitas" value="{{ old('besar_kapasitas', $kapasitas->besar_kapasitas) }}" class="mt-1 block w-64 rounded-md border-gray-300 shadow-sm h-10 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 @error('besar_kapasitas') border-red-500 @enderror" required
+                max="999999999" 
+                oninput="limitInputLength(this, 9)">
             @error('besar_kapasitas')
                 <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
             @enderror
+            <div id="error-message-besar" class="text-sm text-red-600 mt-1 hidden">
+                Maksimal 9 digit angka yang diperbolehkan.
+            </div>
         </div>
 
         <!-- Input: Tarif Kapasitas -->
         <div>
             <label for="tarif_kapasitas" class="block text-sm font-medium text-gray-700">
-                Tarif Kapasitas <span class="text-red-500">*</span>
+                Tarif Kapasitas (Rp) <span class="text-red-500">*</span>
             </label>
             <input 
                 type="number" 
@@ -116,7 +121,13 @@
     <!-- JavaScript untuk Membatasi Input -->
     <script>
         function limitInputLength(input, maxLength) {
-            const errorMessage = document.getElementById('error-message-tarif');
+            let errorMessage;
+
+            if (input.id === 'besar_kapasitas') {
+                errorMessage = document.getElementById('error-message-besar');
+            } else if (input.id === 'tarif_kapasitas') {
+                errorMessage = document.getElementById('error-message-tarif');
+            }
 
             if (input.value.length > maxLength) {
                 input.value = input.value.slice(0, maxLength); // Potong nilai jika melebihi batas

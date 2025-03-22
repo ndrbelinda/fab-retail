@@ -13,7 +13,7 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-            @foreach($faqs as $item)
+            @foreach($faq as $item)
                 <tr>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ $item->produk->nama_produk }}</td>
                     <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($item->pertanyaan, 50) }}</td>
@@ -26,7 +26,7 @@
                     <td class="px-6 py-4 text-sm text-gray-900 flex space-x-2">
                         {{-- Ceklis 1: Draft --}}
                         <div class="relative group">
-                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->status, ['draft', 'diajukan', 'diverifikasi', 'ditolak']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
+                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->is_verified_faq, ['draft', 'diajukan', 'diverifikasi', 'ditolak']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
                                 ✓
                             </div>
                             <div class="absolute hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded mt-2">
@@ -36,7 +36,7 @@
 
                         {{-- Ceklis 2: Diajukan --}}
                         <div class="relative group">
-                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->status, ['diajukan', 'diverifikasi']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
+                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ in_array($item->is_verified_faq, ['diajukan', 'diverifikasi']) ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
                                 ✓
                             </div>
                             <div class="absolute hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded mt-2">
@@ -46,7 +46,7 @@
 
                         {{-- Ceklis 3: Diverifikasi --}}
                         <div class="relative group">
-                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ $item->status === 'diverifikasi' ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
+                            <div class="w-4 h-4 flex items-center justify-center rounded-full {{ $item->is_verified_faq === 'diverifikasi' ? 'bg-green-500' : 'bg-gray-300' }} text-white text-xs">
                                 ✓
                             </div>
                             <div class="absolute hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded mt-2">
@@ -65,22 +65,24 @@
                             {{-- Tombol Tolak --}}
                             <button onclick="openModal('modal-tolak-{{ $item->id }}')" class="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 ml-2">Tolak</button>
                         @else {{-- Jika di halaman daftar FAQ --}}
-                            @if($item->status === 'draft')
+                            @if($item->is_verified_faq === 'draft')
                                 {{-- Tombol Ubah --}}
                                 <a href="{{ route('faq.edit', $item->id) }}" class="bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600">Ubah</a>
                                 {{-- Tombol Hapus Draft --}}
                                 <button onclick="openModal('modal-hapus-{{ $item->id }}')" class="bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 ml-2">Hapus Draft</button>
-                            @elseif($item->status === 'diajukan')
+                            @elseif($item->is_verified_faq === 'diajukan')
                                 {{-- Tombol Menunggu Diverifikasi --}}
                                 <button class="bg-gray-500 text-white px-2 py-1 text-xs rounded cursor-not-allowed" disabled>
                                     Menunggu Diverifikasi
                                 </button>
-                            @elseif($item->status === 'diverifikasi')
+                            @elseif($item->is_verified_faq === 'diverifikasi')
                                 {{-- Tombol Kembalikan --}}
-                                <form action="{{ route('faq.kembalikan', $item->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
-                                </form>
+                                @if(auth()->check() && auth()->user()->role === 'avp')
+                                    <form action="{{ route('faq.kembalikan', $item->id) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600">Kembalikan</button>
+                                    </form>
+                                @endif
                             @endif
                         @endif
                     </td>
@@ -90,8 +92,13 @@
     </table>
 </div>
 
+<!-- Pagination -->
+<div class="mt-4">
+    {{ $faq->links() }}
+</div>
+
 {{-- Modal Detail --}}
-@foreach($faqs as $item)
+@foreach($faq as $item)
     <div id="modal-detail-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6" style="max-height: 80vh; overflow-y: auto;">
             <h3 class="text-lg font-semibold mb-4">Detail FAQ</h3>
@@ -115,7 +122,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($item->riwayat as $riwayat)
+                    @foreach($item->riwayat->sortByDesc('created_at') as $riwayat)
                         <tr>
                             <td class="px-4 py-2 text-sm text-gray-900">
                                 @if($riwayat->status === 'draft')
@@ -144,7 +151,7 @@
 @endforeach
 
 {{-- Modal Hapus --}}
-@foreach($faqs as $item)
+@foreach($faq as $item)
     <div id="modal-hapus-{{ $item->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6">
             <h3 class="text-lg font-semibold mb-4">Konfirmasi Hapus</h3>

@@ -6,19 +6,69 @@ use Illuminate\Http\Request;
 use App\Models\Perangkat;
 use App\Models\Produk;
 use App\Models\RiwayatPerangkat;
+use App\Mail\PerangkatStatusEmail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 
 class PerangkatController extends Controller
 {
     /**
      * Menampilkan daftar perangkat.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $perangkat = Perangkat::with(['produk', 'riwayat'])->get();
+        //Ambil parameter sorting dan filter dari request
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'asc');
+        $produkFilter = $request->query('produk', []);
+        $tarifFilter = $request->query('tarif');
+        $waktuFilter = $request->query('waktu');
+
+        // Query dasar
+        $perangkat = Perangkat::with('produk', 'riwayat');
+
+
+        // Filter berdasarkan produk
+        if (!empty($produkFilter)) {
+            $perangkat->whereHas('produk', function ($query) use ($produkFilter) {
+                $query->whereIn('nama_produk', $produkFilter);
+            });
+        }
+
+        // Filter berdasarkan tarif
+        if ($tarifFilter === 'terendah') {
+            $perangkat->orderBy('tarif_perangkat', 'asc');
+        } elseif ($tarifFilter === 'tertinggi') {
+            $perangkat->orderBy('tarif_perangkat', 'desc');
+        }
+
+        // Filter berdasarkan waktu pembuatan
+        if ($waktuFilter === 'terlama') {
+            $perangkat->orderBy('created_at', 'asc');
+        } elseif ($waktuFilter === 'terbaru') {
+            $perangkat->orderBy('created_at', 'desc');
+        }
+
+        // Default sorting jika tidak ada filter
+        if (empty($tarifFilter) && empty($perangkatFilter) && empty($waktuFilter)) {
+            $perangkat->orderBy('created_at', 'desc');
+        }
+
+        // Ambil data
+        $perangkat = $perangkat->paginate(10);
+
+        // Ambil data produk untuk filter
+        $produk = Produk::all();
+        
         return view('perangkat.index', [
             'title' => 'Daftar Perangkat',
             'perangkat' => $perangkat,
+            'produk' => $produk,
         ]);
     }
 
@@ -44,37 +94,93 @@ class PerangkatController extends Controller
             'id_produk' => 'required|exists:produk,id',
             'jenis_perangkat' => 'required|string',
             'gambar_perangkat' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi gambar
-            'tarif_perangkat' => 'required|numeric',
+            'tarif_perangkat' => 'required|integer',
             'deskripsi_perangkat' => 'nullable|string',
             'tampil_ekatalog' => 'required|boolean',
         ]);
 
+        // Debug: Cek apakah file diunggah
+        if (!$request->hasFile('gambar_perangkat')) {
+            Log::error('Tidak ada file gambar yang diunggah.');
+            return redirect()->back()->with('error', 'Tidak ada file gambar yang diunggah.');
+        }
+
+        $image = $request->file('gambar_perangkat');
+
+        // Debug: Cek apakah file valid
+        if (!$image->isValid()) {
+            Log::error('File gambar tidak valid.');
+            return redirect()->back()->with('error', 'File gambar tidak valid.');
+        }
+
         // Simpan gambar ke storage
-        $gambarPath = $request->file('gambar_perangkat')->store('public/perangkat');
-        $gambarUrl = Storage::url($gambarPath); // Dapatkan URL gambar
+        try {
+            $gambarPath = $image->store('perangkat', 'public');
+	        $gambarUrl = asset('storage/' . $gambarPath);
+
+            // Debug: Tampilkan path dan URL gambar
+            Log::info('Gambar berhasil diunggah.', [
+                'gambarPath' => $gambarPath,
+                'gambarUrl' => $gambarUrl,
+                'fullPath' => storage_path('app/' . $gambarPath),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal menyimpan gambar: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menyimpan gambar.');
+        }
 
         // Tentukan status berdasarkan action
         $status = $request->action === 'ajukan' ? 'diajukan' : 'draft';
 
-        // Simpan perangkat baru
-        $perangkat = Perangkat::create([
-            'id_produk' => $request->id_produk,
-            'jenis_perangkat' => $request->jenis_perangkat,
-            'gambar_perangkat' => $gambarUrl, // Simpan URL gambar
-            'tarif_perangkat' => $request->tarif_perangkat,
-            'deskripsi_perangkat' => $request->deskripsi_perangkat,
-            'is_verified_perangkat' => $status, // Set status berdasarkan action
-            'tampil_ekatalog' => $request->tampil_ekatalog,
-        ]);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Simpan riwayat status
-        RiwayatPerangkat::create([
-            'perangkat_id' => $perangkat->id,
-            'status' => $status,
-            'waktu' => now(),
-        ]);
+        try {
+            // Simpan perangkat baru
+            $perangkat = Perangkat::create([
+                'id_produk' => $request->id_produk,
+                'jenis_perangkat' => $request->jenis_perangkat,
+                'gambar_perangkat' => $gambarUrl, // Simpan URL gambar
+                'tarif_perangkat' => $request->tarif_perangkat,
+                'deskripsi_perangkat' => $request->deskripsi_perangkat,
+                'is_verified_perangkat' => $status, // Set status berdasarkan action
+                'tampil_ekatalog' => $request->tampil_ekatalog,
+            ]);
 
-        return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil ditambahkan!');
+            // Simpan riwayat status
+            RiwayatPerangkat::create([
+                'perangkat_id' => $perangkat->id,
+                'status' => $status,
+                'waktu' => now(),
+            ]);
+
+            // Kirim email hanya jika status "diajukan"
+            if ($status === 'diajukan') {
+                // Ambil email dari user yang sedang login
+                $user = Auth::user();
+                $fromEmail = $user->email;
+
+                // Atur mailer berdasarkan email pengguna
+                $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+                // Kirim email dengan mailer yang dipilih
+                Mail::mailer($mailer)->to('avpprodukxyz@gmail.com')
+                    ->send(new PerangkatStatusEmail($perangkat, $status));
+            }
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil ditambahkan!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error (opsional)
+            Log::error('Gagal menyimpan perangkat: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal menyimpan perangkat. Silakan coba lagi.');
+        }
     }
 
     /**
@@ -95,14 +201,14 @@ class PerangkatController extends Controller
     /**
      * Memperbarui data perangkat.
      */
-    public function update(Request $request, $id)
+   public function update(Request $request, $id)
     {
         // Validasi input
         $request->validate([
             'id_produk' => 'required|exists:produk,id',
             'jenis_perangkat' => 'required|string',
             'gambar_perangkat' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Gambar opsional
-            'tarif_perangkat' => 'required|numeric',
+            'tarif_perangkat' => 'required|integer',
             'deskripsi_perangkat' => 'nullable|string',
             'tampil_ekatalog' => 'required|boolean',
         ]);
@@ -112,6 +218,14 @@ class PerangkatController extends Controller
 
         // Jika ada gambar baru, simpan gambar dan hapus gambar lama
         if ($request->hasFile('gambar_perangkat')) {
+            $image = $request->file('gambar_perangkat');
+
+            // Debug: Cek apakah file valid
+            if (!$image->isValid()) {
+                Log::error('File gambar tidak valid.');
+                return redirect()->back()->with('error', 'File gambar tidak valid.');
+            }
+
             // Hapus gambar lama jika ada
             if ($perangkat->gambar_perangkat) {
                 $oldImagePath = str_replace('/storage', 'public', $perangkat->gambar_perangkat);
@@ -119,32 +233,75 @@ class PerangkatController extends Controller
             }
 
             // Simpan gambar baru
-            $gambarPath = $request->file('gambar_perangkat')->store('public/perangkat');
-            $gambarUrl = Storage::url($gambarPath);
-            $perangkat->gambar_perangkat = $gambarUrl;
+            try {
+                $gambarPath = $image->store('perangkat', 'public');
+                $gambarUrl = asset('storage/' . $gambarPath);
+                $perangkat->gambar_perangkat = $gambarUrl;
+
+                // Debug: Tampilkan path dan URL gambar
+                Log::info('Gambar berhasil diunggah.', [
+                    'gambarPath' => $gambarPath,
+                    'gambarUrl' => $gambarUrl,
+                    'fullPath' => storage_path('app/' . $gambarPath),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Gagal menyimpan gambar: ' . $e->getMessage());
+                return redirect()->back()->with('error', 'Gagal menyimpan gambar.');
+            }
         }
 
         // Tentukan status berdasarkan action
         $status = $request->action === 'ajukan' ? 'diajukan' : 'draft';
 
-        // Perbarui data perangkat
-        $perangkat->update([
-            'id_produk' => $request->id_produk,
-            'jenis_perangkat' => $request->jenis_perangkat,
-            'tarif_perangkat' => $request->tarif_perangkat,
-            'deskripsi_perangkat' => $request->deskripsi_perangkat,
-            'is_verified_perangkat' => $status, // Set status berdasarkan action
-            'tampil_ekatalog' => $request->tampil_ekatalog,
-        ]);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Simpan riwayat status baru
-        RiwayatPerangkat::create([
-            'perangkat_id' => $perangkat->id,
-            'status' => $status,
-            'waktu' => now(),
-        ]);
+        try {
+            // Perbarui data perangkat
+            $perangkat->update([
+                'id_produk' => $request->id_produk,
+                'jenis_perangkat' => $request->jenis_perangkat,
+                'gambar_perangkat' => $gambarUrl ?? $perangkat->gambar_perangkat, // Simpan URL gambar baru atau tetap gunakan yang lama
+                'tarif_perangkat' => $request->tarif_perangkat,
+                'deskripsi_perangkat' => $request->deskripsi_perangkat,
+                'is_verified_perangkat' => $status, // Set status berdasarkan action
+                'tampil_ekatalog' => $request->tampil_ekatalog,
+            ]);
 
-        return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil diperbarui!');
+            // Simpan riwayat status
+            RiwayatPerangkat::create([
+                'perangkat_id' => $perangkat->id,
+                'status' => $status,
+                'waktu' => now(),
+            ]);
+
+            // Kirim email hanya jika status "diajukan"
+            if ($status === 'diajukan') {
+                // Ambil email dari user yang sedang login
+                $user = Auth::user();
+                $fromEmail = $user->email;
+
+                // Atur mailer berdasarkan email pengguna
+                $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+                // Kirim email dengan mailer yang dipilih
+                Mail::mailer($mailer)->to('avpprodukxyz@gmail.com')
+                    ->send(new PerangkatStatusEmail($perangkat, $status));
+            }
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil diperbarui!');
+        } catch (\Exception $e) {
+            // Rollback transaksi jika terjadi kesalahan
+            DB::rollBack();
+
+            // Log error (opsional)
+            Log::error('Gagal memperbarui perangkat: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal memperbarui perangkat. Silakan coba lagi.');
+        }
     }
 
     /**
@@ -167,15 +324,54 @@ class PerangkatController extends Controller
     /**
      * Menampilkan halaman verifikasi perangkat.
      */
-    public function verifyIndex()
+    public function verifyIndex(Request $request)
     {
-        $perangkat = Perangkat::with(['produk', 'riwayat'])
-            ->where('is_verified_perangkat', 'diajukan')
-            ->get();
+        // Ambil parameter filter dari request
+        $produkFilter = $request->query('produk', []);
+        $tarifFilter = $request->query('tarif');
+        $waktuFilter = $request->query('waktu');
 
+        // Query dasar untuk perangkat yang statusnya 'diajukan'
+        $perangkat = Perangkat::with(['produk', 'riwayat'])
+            ->where('is_verified_perangkat', 'diajukan');
+
+        // Filter berdasarkan produk
+        // Filter berdasarkan produk
+        if (!empty($produkFilter)) {
+            $perangkat->whereHas('produk', function ($query) use ($produkFilter) {
+                $query->whereIn('nama_produk', $produkFilter);
+            });
+        }
+
+        // Filter berdasarkan tarif
+        if ($tarifFilter === 'terendah') {
+            $perangkat->orderBy('tarif_perangkat', 'asc');
+        } elseif ($tarifFilter === 'tertinggi') {
+            $perangkat->orderBy('tarif_perangkat', 'desc');
+        }
+
+        // Filter berdasarkan waktu pembuatan
+        if ($waktuFilter === 'terlama') {
+            $perangkat->orderBy('created_at', 'asc');
+        } elseif ($waktuFilter === 'terbaru') {
+            $perangkat->orderBy('created_at', 'desc');
+        }
+
+        // Default sorting jika tidak ada filter
+        if (empty($tarifFilter) && empty($perangkatFilter) && empty($waktuFilter)) {
+            $perangkat->orderBy('created_at', 'desc');
+        }
+
+        // Ambil data
+        $perangkat = $perangkat->paginate(10);
+
+        // Ambil data produk untuk filter
+        $produk = Produk::all();
+        
         return view('perangkat.verify', [
-            'title' => 'Menunggu Verifikasi',
+            'title' => 'Daftar Perangkat',
             'perangkat' => $perangkat,
+            'produk' => $produk,
         ]);
     }
 
@@ -184,21 +380,46 @@ class PerangkatController extends Controller
      */
     public function terima($id)
     {
-        $perangkat = Perangkat::findOrFail($id);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Ubah status menjadi diverifikasi
-        $perangkat->update([
-            'is_verified_perangkat' => 'diverifikasi',
-        ]);
+        try {
+            // Ambil data perangkat yang akan diverifikasi
+            $perangkat = Perangkat::findOrFail($id);
 
-        // Simpan riwayat status diverifikasi
-        RiwayatPerangkat::create([
-            'perangkat_id' => $perangkat->id,
-            'status' => 'diverifikasi',
-            'waktu' => now(),
-        ]);
+            // Ubah status menjadi diverifikasi
+            $perangkat->update([
+                'is_verified_perangkat' => 'diverifikasi',
+            ]);
 
-        return redirect()->route('perangkat.verify')->with('success', 'Perangkat berhasil diverifikasi!');
+            // Simpan riwayat status
+            RiwayatPerangkat::create([
+                'perangkat_id' => $perangkat->id,
+                'status' => 'diverifikasi',
+                'waktu' => now(),
+            ]);
+
+            // Kirim email notifikasi
+            $user = Auth::user();
+            $fromEmail = $user->email;
+            $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+            Mail::mailer($mailer)->to('staffprodukxyz@gmail.com')
+                ->send(new PerangkatStatusEmail($perangkat, 'diverifikasi'));
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('perangkat.verify')->with('success', 'Perangkat berhasil diverifikasi!');
+            } catch (\Exception $e) {
+                // Rollback transaksi jika terjadi kesalahan
+                DB::rollBack();
+
+                // Log error (opsional)
+                Log::error('Gagal menyimpan perangkat: ' . $e->getMessage());
+
+                return redirect()->back()->with('error', 'Gagal menyimpan perangkat. Silakan coba lagi.');
+            }
     }
 
     /**
@@ -206,27 +427,52 @@ class PerangkatController extends Controller
      */
     public function tolak(Request $request, $id)
     {
-        // Validasi input alasan penolakan
-        $request->validate([
-            'alasan_penolakan' => 'required|string',
-        ]);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        $perangkat = Perangkat::findOrFail($id);
+        try {
+            // Validasi input alasan penolakan
+            $request->validate([
+                'alasan_penolakan' => 'required|string',
+            ]);
 
-        // Ubah status menjadi draft
-        $perangkat->update([
-            'is_verified_perangkat' => 'draft',
-        ]);
+            // Ambil data perangkat yang akan diverifikasi
+            $perangkat = Perangkat::findOrFail($id);
 
-        // Simpan riwayat status ditolak
-        RiwayatPerangkat::create([
-            'perangkat_id' => $perangkat->id,
-            'status' => 'ditolak',
-            'waktu' => now(),
-            'keterangan' => $request->alasan_penolakan,
-        ]);
+            // Ubah status menjadi draft
+            $perangkat->update([
+                'is_verified_perangkat' => 'draft',
+            ]);
 
-        return redirect()->route('perangkat.verify')->with('success', 'Perangkat berhasil ditolak!');
+            // Simpan riwayat status
+            RiwayatPerangkat::create([
+                'perangkat_id' => $perangkat->id,
+                'status' => 'ditolak',
+                'waktu' => now(),
+                'keterangan' => $request->alasan_penolakan,
+            ]);
+
+            // Kirim email notifikasi
+            $user = Auth::user();
+            $fromEmail = $user->email;
+            $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+            Mail::mailer($mailer)->to('staffprodukxyz@gmail.com')
+                ->send(new PerangkatStatusEmail($perangkat, 'ditolak', $request->alasan_penolakan));
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('perangkat.verify')->with('success', 'Perangkat berhasil ditolak!');
+            } catch (\Exception $e) {
+                // Rollback transaksi jika terjadi kesalahan
+                DB::rollBack();
+
+                // Log error (opsional)
+                Log::error('Gagal menyimpan perangkat: ' . $e->getMessage());
+
+                return redirect()->back()->with('error', 'Gagal menyimpan perangkat. Silakan coba lagi.');
+            }
     }
 
     /**
@@ -234,21 +480,47 @@ class PerangkatController extends Controller
      */
     public function kembalikan($id)
     {
-        $perangkat = Perangkat::findOrFail($id);
+        // Mulai transaksi database
+        DB::beginTransaction();
 
-        // Ubah status menjadi draft
-        $perangkat->update([
-            'is_verified_perangkat' => 'draft',
-        ]);
+        try {
+            // Ambil data perangkat yang akan diverifikasi
+            $perangkat = Perangkat::findOrFail($id);
 
-        // Simpan riwayat status draft dengan keterangan
-        RiwayatPerangkat::create([
-            'perangkat_id' => $perangkat->id,
-            'status' => 'draft',
-            'waktu' => now(),
-            'keterangan' => 'Dikembalikan dari diverifikasi',
-        ]);
+            // Ubah status menjadi diverifikasi
+            $perangkat->update([
+                'is_verified_perangkat' => 'draft',
+            ]);
 
-        return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil dikembalikan ke draft!');
+            // Simpan riwayat status
+            $keterangan = 'Dikembalikan dari diverifikasi';
+            RiwayatPerangkat::create([
+                'perangkat_id' => $perangkat->id,
+                'status' => 'draft',
+                'waktu' => now(),
+                'keterangan' => $keterangan,
+            ]);
+
+            // Kirim email notifikasi
+            $user = Auth::user();
+            $fromEmail = $user->email;
+            $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
+
+            Mail::mailer($mailer)->to('staffprodukxyz@gmail.com')
+                ->send(new PerangkatStatusEmail($perangkat, 'dikembalikan', $keterangan));
+
+            // Commit transaksi
+            DB::commit();
+
+            return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil dikembalikan ke draft!');
+            } catch (\Exception $e) {
+                // Rollback transaksi jika terjadi kesalahan
+                DB::rollBack();
+
+                // Log error (opsional)
+                Log::error('Gagal menyimpan perangkat: ' . $e->getMessage());
+
+                return redirect()->back()->with('error', 'Gagal menyimpan perangkat. Silakan coba lagi.');
+            }
     }
 }

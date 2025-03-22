@@ -14,7 +14,8 @@ class Capacity extends Model
     ];
 
     protected $casts = [
-        'tarif_kapasitas' => 'decimal:2',
+        'besar_kapasitas' => 'integer',
+        'tarif_kapasitas' => 'integer',
         'tampil_ekatalog' => 'boolean',
     ];
 
