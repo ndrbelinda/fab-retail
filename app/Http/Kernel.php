@@ -3,55 +3,58 @@
 namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
-use Illuminate\Auth\Middleware\Authenticate;
-use Illuminate\Routing\Middleware\ThrottleRequests;
-use Illuminate\Foundation\Http\Middleware\TrimStrings;
-use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
 use Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance;
+use Illuminate\Foundation\Http\Middleware\TrimStrings;
+use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Http\Middleware\HandleCors;
+use Illuminate\Http\Middleware\TrustProxies;
 
 class Kernel extends HttpKernel
 {
     /**
-     * The application's global HTTP middleware stack.
+     * Global middleware stack
      */
     protected $middleware = [
-        PreventRequestsDuringMaintenance::class,
+        TrustProxies::class,
         HandleCors::class,
+        PreventRequestsDuringMaintenance::class,
+        ValidatePostSize::class,
         TrimStrings::class,
         ConvertEmptyStringsToNull::class,
+        \App\Http\Middleware\Cors::class,
     ];
 
     /**
-     * The application's route middleware groups.
+     * Route middleware groups
      */
     protected $middlewareGroups = [
         'web' => [
             EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
             StartSession::class,
-            ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
             SubstituteBindings::class,
         ],
 
         'api' => [
             'throttle:api',
+            \App\Http\Middleware\AuthenticateWithJWT::class,
             SubstituteBindings::class,
         ],
     ];
 
     /**
-     * The application's route middleware.
+     * Route middleware aliases
      */
-    protected $routeMiddleware = [
-        'auth' => Authenticate::class,
-        'throttle' => ThrottleRequests::class,
-        'role' => \App\Http\Middleware\RoleMiddleware::class,
+    protected $middlewareAliases = [
+        'auth.jwt' => \App\Http\Middleware\AuthenticateWithJWT::class,
+        'jwt.verify' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
     ];
-
-    
 }
