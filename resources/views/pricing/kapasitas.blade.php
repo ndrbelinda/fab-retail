@@ -14,10 +14,7 @@
         </a>
     </div>
 
-    <div class="space-y-8">
+    @include('pricing.partials.table-kapasitas', ['kapasitas' => $kapasitas])
 
-        @include('pricing.partials.table-kapasitas', ['kapasitas' => $kapasitas])
-
-    </div>
 
 </x-layout>

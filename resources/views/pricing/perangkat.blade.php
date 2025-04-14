@@ -14,10 +14,6 @@
         </a>
     </div>
 
-    <div class="space-y-8">
-
-        @include('pricing.partials.table-perangkat', ['perangkat' => $perangkat])
-
-    </div>
+    @include('pricing.partials.table-perangkat', ['perangkat' => $perangkat])
 
 </x-layout>
