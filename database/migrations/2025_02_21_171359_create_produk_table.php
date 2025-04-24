@@ -13,6 +13,7 @@ class CreateProdukTable extends Migration
             $table->id(); // Primary key
             $table->string('nama_produk'); // Kolom nama_produk dengan tipe string
             $table->string('level_produk'); // Kolom level_produk dengan tipe string
+            $table->text('deskripi_produk')->nullable(); // Kolom deskripi_produk dengan tipe text, nullable
             $table->timestamps(); // Kolom created_at dan updated_at
         });
     }

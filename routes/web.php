@@ -9,7 +9,9 @@ use App\Http\Controllers\PricingController;
 use App\Http\Controllers\PricingPerangkatController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
-Route::get('/', function () { return redirect()->route('login'); });
+Route::get('/', function () {
+    return redirect()->route('login');
+});
 
 Route::get('/beranda', [BerandaController::class, 'index'])->name('beranda');
 

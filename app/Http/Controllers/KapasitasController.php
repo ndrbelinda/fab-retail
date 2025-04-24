@@ -157,7 +157,7 @@ class KapasitasController extends Controller
     /**
      * Menampilkan form edit kapasitas.
      */
-        public function edit($id)
+    public function edit($id)
     {
         // Ambil data kapasitas yang akan diedit
         $kapasitas = Capacity::findOrFail($id);
@@ -175,7 +175,7 @@ class KapasitasController extends Controller
     /**
      * Memperbarui data kapasitas.
      */
-        public function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         // Validasi input
         $request->validate([
@@ -471,5 +471,5 @@ class KapasitasController extends Controller
 
         return redirect()->route('pricing.kapasitas')->with('success', 'Pricing berhasil diperbarui!');
     }
-    
+
 }
