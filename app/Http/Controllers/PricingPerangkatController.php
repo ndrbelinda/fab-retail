@@ -29,25 +29,35 @@ class PricingPerangkatController extends Controller
      */
     public function updatePricingPerangkat(Request $request, $id)
     {
-        // Ambil data kapasitas
         $perangkat = Perangkat::findOrFail($id);
 
-        // Validasi input
         $request->validate([
             'pricing' => [
                 'required',
                 'numeric',
-                'min:' . $perangkat->tarif_perangkat, // Pricing tidak boleh kurang dari tarif
+                'min:' . $perangkat->tarif_perangkat,
             ],
+            'dokumen' => 'nullable|file|mimes:pdf|max:2048', // Max 2MB, hanya PDF
         ], [
-            'pricing.min' => 'Pricing tidak boleh kurang dari tarif.', // Pesan error khusus
+            'pricing.min' => 'Pricing tidak boleh kurang dari tarif.',
+            'dokumen.mimes' => 'Dokumen harus berupa file PDF.',
+            'dokumen.max' => 'Ukuran dokumen tidak boleh lebih dari 2MB.',
         ]);
 
-        // Simpan riwayat pricing
-        RiwayatPricingPerangkat::create([
+        $data = [
             'perangkat_id' => $perangkat->id,
-            'pricing' => $request->pricing, // Ubah dari nominal ke pricing
-        ]);
+            'pricing' => $request->pricing,
+        ];
+
+        // Handle dokumen upload
+        if ($request->hasFile('dokumen')) {
+            $file = $request->file('dokumen');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('dokumen_pricing', $fileName, 'public');
+            $data['dokumen'] = $filePath;
+        }
+
+        RiwayatPricingPerangkat::create($data);
 
         return redirect()->route('pricing.perangkat')->with('success', 'Pricing berhasil diperbarui!');
     }

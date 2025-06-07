@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class KapasitasController extends Controller
 {
@@ -96,10 +97,20 @@ class KapasitasController extends Controller
     {
         $request->validate([
             'id_produk' => 'required|exists:produk,id',
-            'besar_kapasitas' => 'required|integer',
-            'tarif_kapasitas' => 'required|integer',
+            'besar_kapasitas' => [
+            'required',
+            'numeric',
+            'integer',
+            'min:1',
+            Rule::unique('capacities')->where(function ($query) use ($request) {
+                return $query->where('id_produk', $request->id_produk);
+                })
+            ],
+            'tarif_kapasitas' => 'required|numeric|integer|min:1',
             'deskripsi_kapasitas' => 'nullable|string',
-            'tampil_ekatalog' => 'required|boolean',
+            'tampil_ekatalog' => 'required|boolean', 
+        ], [
+        'besar_kapasitas.unique' => 'Kapasitas Internet sudah ada untuk produk ini.'
         ]);
 
         $status = $request->action === 'ajukan' ? 'diajukan' : 'draft';

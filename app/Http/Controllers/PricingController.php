@@ -29,27 +29,37 @@ class PricingController extends Controller
      */
     public function updatePricingKapasitas(Request $request, $id)
     {
-        // Ambil data kapasitas
         $kapasitas = Capacity::findOrFail($id);
 
-        // Validasi input
         $request->validate([
             'pricing' => [
                 'required',
                 'numeric',
-                'min:' . $kapasitas->tarif_kapasitas, // Pricing tidak boleh kurang dari tarif
+                'min:' . $kapasitas->tarif_kapasitas,
             ],
+            'dokumen' => 'nullable|file|mimes:pdf|max:2048', // Max 2MB, hanya PDF
         ], [
-            'pricing.min' => 'Pricing tidak boleh kurang dari tarif.', // Pesan error khusus
+            'pricing.min' => 'Pricing tidak boleh kurang dari tarif.',
+            'dokumen.mimes' => 'Dokumen harus berupa file PDF.',
+            'dokumen.max' => 'Ukuran dokumen tidak boleh lebih dari 2MB.',
         ]);
 
-        // Simpan riwayat pricing
-        RiwayatPricingKapasitas::create([
+        $data = [
             'kapasitas_id' => $kapasitas->id,
-            'pricing' => $request->pricing, // Ubah dari nominal ke pricing
-        ]);
+            'pricing' => $request->pricing,
+        ];
 
-        return redirect()->route('pricing.perangkat')->with('success', 'Pricing berhasil diperbarui!');
+        // Handle dokumen upload
+        if ($request->hasFile('dokumen')) {
+            $file = $request->file('dokumen');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('dokumen_pricing', $fileName, 'public');
+            $data['dokumen'] = $filePath;
+        }
+
+        RiwayatPricingKapasitas::create($data);
+
+        return redirect()->route('pricing.kapasitas')->with('success', 'Pricing berhasil diperbarui!');
     }
 
 }

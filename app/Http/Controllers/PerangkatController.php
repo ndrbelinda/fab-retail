@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 
 class PerangkatController extends Controller
@@ -92,11 +93,19 @@ class PerangkatController extends Controller
         // Validasi input
         $request->validate([
             'id_produk' => 'required|exists:produk,id',
-            'jenis_perangkat' => 'required|string',
+            'jenis_perangkat' => [
+                'required',
+                'string',
+                Rule::unique('perangkats')->where(function ($query) use ($request) {
+                    return $query->where('id_produk', $request->id_produk);
+                })
+            ],
             'gambar_perangkat' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi gambar
-            'tarif_perangkat' => 'required|integer',
+            'tarif_perangkat' => 'required|numeric|integer|min:1',
             'deskripsi_perangkat' => 'nullable|string',
             'tampil_ekatalog' => 'required|boolean',
+        ], [
+            'jenis_perangkat.unique' => 'Perangkat ini sudah ada untuk produk yang dipilih'
         ]);
 
         // Debug: Cek apakah file diunggah

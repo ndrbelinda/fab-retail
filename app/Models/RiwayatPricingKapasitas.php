@@ -9,7 +9,7 @@ class RiwayatPricingKapasitas extends Model
     protected $table = 'riwayat_pricing_kapasitas';
 
     protected $fillable = [
-        'kapasitas_id', 'pricing', // Ubah dari nominal ke pricing
+        'kapasitas_id', 'pricing', 'dokumen' // Ubah dari nominal ke pricing
     ];
 
     // Relasi ke tabel capacities
