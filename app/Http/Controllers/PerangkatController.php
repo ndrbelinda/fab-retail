@@ -215,23 +215,32 @@ class PerangkatController extends Controller
         // Validasi input
         $request->validate([
             'id_produk' => 'required|exists:produk,id',
-            'jenis_perangkat' => 'required|string',
-            'gambar_perangkat' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Gambar opsional
-            'tarif_perangkat' => 'required|integer',
-            'deskripsi_perangkat' => 'nullable|string',
+            'jenis_perangkat' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('perangkats')->where(function ($query) use ($request) {
+                    return $query->where('id_produk', $request->id_produk);
+                })->ignore($id)
+            ],
+            'gambar_perangkat' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'tarif_perangkat' => 'required|integer|min:1',
+            'deskripsi_perangkat' => 'nullable|string|max:500',
             'tampil_ekatalog' => 'required|boolean',
+        ], [
+            'jenis_perangkat.unique' => 'Jenis perangkat sudah ada untuk produk ini.',
+            'tarif_perangkat.min' => 'Tarif perangkat harus minimal 1.'
         ]);
 
         // Ambil data perangkat yang akan diperbarui
         $perangkat = Perangkat::findOrFail($id);
 
-        // Jika ada gambar baru, simpan gambar dan hapus gambar lama
+        // Handle gambar perangkat
+        $gambarUrl = null;
         if ($request->hasFile('gambar_perangkat')) {
             $image = $request->file('gambar_perangkat');
 
-            // Debug: Cek apakah file valid
             if (!$image->isValid()) {
-                Log::error('File gambar tidak valid.');
                 return redirect()->back()->with('error', 'File gambar tidak valid.');
             }
 
@@ -241,18 +250,9 @@ class PerangkatController extends Controller
                 Storage::delete($oldImagePath);
             }
 
-            // Simpan gambar baru
             try {
                 $gambarPath = $image->store('perangkat', 'public');
-                $gambarUrl = asset('storage/' . $gambarPath);
-                $perangkat->gambar_perangkat = $gambarUrl;
-
-                // Debug: Tampilkan path dan URL gambar
-                Log::info('Gambar berhasil diunggah.', [
-                    'gambarPath' => $gambarPath,
-                    'gambarUrl' => $gambarUrl,
-                    'fullPath' => storage_path('app/' . $gambarPath),
-                ]);
+                $gambarUrl = '/storage/' . $gambarPath; // Gunakan path relatif untuk konsistensi
             } catch (\Exception $e) {
                 Log::error('Gagal menyimpan gambar: ' . $e->getMessage());
                 return redirect()->back()->with('error', 'Gagal menyimpan gambar.');
@@ -270,10 +270,10 @@ class PerangkatController extends Controller
             $perangkat->update([
                 'id_produk' => $request->id_produk,
                 'jenis_perangkat' => $request->jenis_perangkat,
-                'gambar_perangkat' => $gambarUrl ?? $perangkat->gambar_perangkat, // Simpan URL gambar baru atau tetap gunakan yang lama
+                'gambar_perangkat' => $gambarUrl ?? $perangkat->gambar_perangkat,
                 'tarif_perangkat' => $request->tarif_perangkat,
                 'deskripsi_perangkat' => $request->deskripsi_perangkat,
-                'is_verified_perangkat' => $status, // Set status berdasarkan action
+                'is_verified_perangkat' => $status,
                 'tampil_ekatalog' => $request->tampil_ekatalog,
             ]);
 
@@ -286,14 +286,10 @@ class PerangkatController extends Controller
 
             // Kirim email hanya jika status "diajukan"
             if ($status === 'diajukan') {
-                // Ambil email dari user yang sedang login
                 $user = Auth::user();
                 $fromEmail = $user->email;
-
-                // Atur mailer berdasarkan email pengguna
                 $mailer = ($fromEmail === 'avpprodukxyz@gmail.com') ? 'smtp_avp' : 'smtp_staff';
 
-                // Kirim email dengan mailer yang dipilih
                 Mail::mailer($mailer)->to('avpprodukxyz@gmail.com')
                     ->send(new PerangkatStatusEmail($perangkat, $status));
             }
@@ -303,11 +299,13 @@ class PerangkatController extends Controller
 
             return redirect()->route('perangkat.index')->with('success', 'Perangkat berhasil diperbarui!');
         } catch (\Exception $e) {
-            // Rollback transaksi jika terjadi kesalahan
             DB::rollBack();
-
-            // Log error (opsional)
             Log::error('Gagal memperbarui perangkat: ' . $e->getMessage());
+            
+            // Hapus gambar baru jika transaksi gagal dan gambar baru sudah diupload
+            if (isset($gambarPath)) {
+                Storage::delete('public/' . $gambarPath);
+            }
 
             return redirect()->back()->with('error', 'Gagal memperbarui perangkat. Silakan coba lagi.');
         }

@@ -191,10 +191,20 @@ class KapasitasController extends Controller
         // Validasi input
         $request->validate([
             'id_produk' => 'required|exists:produk,id',
-            'besar_kapasitas' => 'required|integer',
-            'tarif_kapasitas' => 'required|integer',
+            'besar_kapasitas' => [
+                'required',
+                'numeric',
+                'integer',
+                'min:1',
+                Rule::unique('capacities')->where(function ($query) use ($request) {
+                    return $query->where('id_produk', $request->id_produk);
+                })->ignore($id) // Ignore current record
+            ],
+            'tarif_kapasitas' => 'required|numeric|integer|min:1',
             'deskripsi_kapasitas' => 'nullable|string',
             'tampil_ekatalog' => 'required|boolean',
+        ], [
+            'besar_kapasitas.unique' => 'Kapasitas Internet sudah ada untuk produk ini.'
         ]);
 
         // Tentukan status berdasarkan action
@@ -213,7 +223,7 @@ class KapasitasController extends Controller
                 'besar_kapasitas' => $request->besar_kapasitas,
                 'tarif_kapasitas' => $request->tarif_kapasitas,
                 'deskripsi_kapasitas' => $request->deskripsi_kapasitas,
-                'is_verified_kapasitas' => $status, // Set status berdasarkan action
+                'is_verified_kapasitas' => $status,
                 'tampil_ekatalog' => $request->tampil_ekatalog,
             ]);
 
@@ -235,7 +245,7 @@ class KapasitasController extends Controller
 
                 // Kirim email dengan mailer yang dipilih
                 Mail::mailer($mailer)->to('avpprodukxyz@gmail.com')
-                    ->send(new KapasitasStatusEmail($kapasitas, $fromEmail));
+                    ->send(new KapasitasStatusEmail($kapasitas, $status));
             }
 
             // Commit transaksi
