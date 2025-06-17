@@ -120,9 +120,11 @@
         <div class="bg-white p-6 rounded-lg max-w-sm w-full">
             <h3 class="text-lg font-bold mb-4">Peringatan</h3>
             <p id="modalMessage" class="mb-4">Perangkat sudah ada untuk produk ini</p>
-            <button onclick="closeModal()" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-                Oke
-            </button>
+            <div class="mt-5 flex justify-end">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600">
+                    Oke
+                </button>
+            </div>
         </div>
     </div>
 
