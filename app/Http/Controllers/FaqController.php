@@ -19,8 +19,6 @@ class FaqController extends Controller
     public function index(Request $request)
     {
         //Menampilkan daftar Faq
-        $sort = $request->query('sort');
-        $direction = $request->query('direction', 'asc');
         $produkFilter = $request->query('produk', []);
         $waktuFilter = $request->query('waktu');
 
@@ -92,7 +90,7 @@ class FaqController extends Controller
                 'pertanyaan' => $request->pertanyaan,
                 'jawaban' => $request->jawaban,
                 'tampil_ekatalog' => $request->tampil_ekatalog,
-                'is_verified_faq' => $status, // Pastikan ini sesuai dengan kolom di database
+                'is_verified_faq' => $status, 
             ]);
 
             // Simpan riwayat status

@@ -3,7 +3,10 @@
         <button @click="open = !open" class="flex items-center text-gray-700 hover:text-gray-900">
             @auth
                 <span class="mr-2">{{ auth()->user()->username }}</span>
-            @endauth
+                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded mr-2">
+                    {{ auth()->user()->role }}
+                </span>
+                @endauth
             
             <svg class="w-4 h-4 transform transition-transform" :class="{ 'rotate-180': open }">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>

@@ -34,7 +34,7 @@ class PricingController extends Controller
         $request->validate([
             'pricing' => [
                 'required',
-                'numeric',
+                'integer',
                 'min:' . $kapasitas->tarif_kapasitas,
             ],
             'dokumen' => 'nullable|file|mimes:pdf|max:2048', // Max 2MB, hanya PDF
@@ -46,7 +46,7 @@ class PricingController extends Controller
 
         $data = [
             'kapasitas_id' => $kapasitas->id,
-            'pricing' => $request->pricing,
+            'pricing' => (int) $request->pricing,
         ];
 
         // Handle dokumen upload

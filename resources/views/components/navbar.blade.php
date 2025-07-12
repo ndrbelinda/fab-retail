@@ -1,7 +1,9 @@
 <div class="bg-blue-800 text-white w-64 min-h-screen p-4">
     <div class="flex items-center mb-8">
         <img src="/img/icon_fab.png" alt="Logo" class="h-8 w-8 mr-2">
-        <span class="font-semibold text-lg">FAB Retail</span>
+        <a href="{{ route('beranda') }}" class="font-semibold text-lg no-underline hover:text-blue-600">
+            FAB Retail
+        </a>
     </div>
 
     @auth

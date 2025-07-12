@@ -316,6 +316,11 @@ class KapasitasController extends Controller
             $kapasitas->orderBy('created_at', 'desc');
         }
 
+        // Default sorting jika tidak ada filter
+        if (empty($tarifFilter) && empty($kapasitasFilter) && empty($waktuFilter)) {
+            $kapasitas->orderBy('created_at', 'desc');
+        }
+
         // Ambil data
         $kapasitas = $kapasitas->paginate(10);
 
